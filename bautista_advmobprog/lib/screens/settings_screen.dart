@@ -1,4 +1,4 @@
-//ENHANCEMENT 3: ADD SETTINGS PAGE TO MOVE THE DARK/LIGHT MODE SWITCH.
+//LAB ACTIVITY 2 ENHANCEMENT 3: ADD SETTINGS PAGE TO MOVE THE DARK/LIGHT MODE SWITCH.
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
@@ -54,7 +54,9 @@ class SettingsScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             CustomText(
-                              text: 'Dark Mode',
+                              text: themeProvider.isDark
+                                  ? 'Dark Mode'
+                                  : 'Light Mode',
                               fontSize: 16.sp,
                               fontWeight: FontWeight.w600,
                             ),

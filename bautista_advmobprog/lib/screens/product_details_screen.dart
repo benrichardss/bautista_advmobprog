@@ -1,24 +1,51 @@
-//ENHANCEMENT 2: ADD DETAILS PAGE WHEN CLICKED THE CARD.
+//LAB ACTIVITY 2 ENHANCEMENT 2: ADD DETAILS PAGE WHEN CLICKED THE CARD.
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../models/product_model.dart';
+import '../services/cart_service.dart';
 import '../widgets/custom_text.dart';
 
-class ProductDetailsScreen extends StatelessWidget {
+class ProductDetailsScreen extends StatefulWidget {
   final Product product;
 
-  const ProductDetailsScreen({
-    super.key,
-    required this.product,
-  });
+  const ProductDetailsScreen({super.key, required this.product});
+
+  @override
+  State<ProductDetailsScreen> createState() => _ProductDetailsScreenState();
+}
+
+class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
+  bool _isAddingToCart = false;
+
+  Product get product => widget.product;
+
+  Future<void> _addToCart() async {
+    setState(() => _isAddingToCart = true);
+    try {
+      await CartService().addToCart(
+        userId: 5,
+        productId: product.id,
+        quantity: 1,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Product added to cart')));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Unable to add product: $error')));
+    } finally {
+      if (mounted) setState(() => _isAddingToCart = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Product Details'),
-      ),
+      appBar: AppBar(title: const Text('Product Details')),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16.r),
         child: Column(
@@ -27,7 +54,6 @@ class ProductDetailsScreen extends StatelessWidget {
             // --------------------------------------------------
             // IMAGE CAROUSEL
             // --------------------------------------------------
-
             _buildImageCarousel(),
 
             SizedBox(height: 20.h),
@@ -35,7 +61,6 @@ class ProductDetailsScreen extends StatelessWidget {
             // --------------------------------------------------
             // PRODUCT TITLE
             // --------------------------------------------------
-
             CustomText(
               text: product.title,
               fontSize: 24.sp,
@@ -47,21 +72,12 @@ class ProductDetailsScreen extends StatelessWidget {
             // --------------------------------------------------
             // CATEGORY + BRAND
             // --------------------------------------------------
-
             Row(
               children: [
-                _buildChip(
-                  product.category,
-                  Icons.category_outlined,
-                  context,
-                ),
+                _buildChip(product.category, Icons.category_outlined, context),
                 SizedBox(width: 8.w),
                 if (product.brand.isNotEmpty)
-                  _buildChip(
-                    product.brand,
-                    Icons.business_outlined,
-                    context,
-                  ),
+                  _buildChip(product.brand, Icons.business_outlined, context),
               ],
             ),
 
@@ -70,27 +86,19 @@ class ProductDetailsScreen extends StatelessWidget {
             // --------------------------------------------------
             // RATING
             // --------------------------------------------------
-
             Row(
               children: [
-                ...List.generate(
-                  5,
-                  (index) {
-                    if (index < product.rating.floor()) {
-                      return Icon(
-                        Icons.star,
-                        color: Colors.amber,
-                        size: 20.sp,
-                      );
-                    }
+                ...List.generate(5, (index) {
+                  if (index < product.rating.floor()) {
+                    return Icon(Icons.star, color: Colors.amber, size: 20.sp);
+                  }
 
-                    return Icon(
-                      Icons.star_border,
-                      color: Colors.amber,
-                      size: 20.sp,
-                    );
-                  },
-                ),
+                  return Icon(
+                    Icons.star_border,
+                    color: Colors.amber,
+                    size: 20.sp,
+                  );
+                }),
 
                 SizedBox(width: 8.w),
 
@@ -114,15 +122,28 @@ class ProductDetailsScreen extends StatelessWidget {
             // --------------------------------------------------
             // PRICE
             // --------------------------------------------------
-
             _buildPriceSection(context),
 
             SizedBox(height: 16.h),
 
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _isAddingToCart ? null : _addToCart,
+                icon: _isAddingToCart
+                    ? SizedBox(
+                        width: 18.sp,
+                        height: 18.sp,
+                        child: const CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.add_shopping_cart),
+                label: const Text('Add to cart'),
+              ),
+            ),
+
             // --------------------------------------------------
             // AVAILABILITY
             // --------------------------------------------------
-
             _buildAvailability(),
 
             SizedBox(height: 20.h),
@@ -130,14 +151,10 @@ class ProductDetailsScreen extends StatelessWidget {
             // --------------------------------------------------
             // DESCRIPTION
             // --------------------------------------------------
-
             _buildSectionCard(
               title: 'Description',
               icon: Icons.description_outlined,
-              child: CustomText(
-                text: product.description,
-                fontSize: 14.sp,
-              ),
+              child: CustomText(text: product.description, fontSize: 14.sp),
             ),
 
             SizedBox(height: 14.h),
@@ -145,7 +162,6 @@ class ProductDetailsScreen extends StatelessWidget {
             // --------------------------------------------------
             // PRODUCT INFORMATION
             // --------------------------------------------------
-
             _buildSectionCard(
               title: 'Product Information',
               icon: Icons.info_outline,
@@ -153,30 +169,16 @@ class ProductDetailsScreen extends StatelessWidget {
                 children: [
                   _infoRow(
                     'Brand',
-                    product.brand.isEmpty
-                        ? 'N/A'
-                        : product.brand,
+                    product.brand.isEmpty ? 'N/A' : product.brand,
                   ),
-                  _infoRow(
-                    'Category',
-                    product.category,
-                  ),
-                  _infoRow(
-                    'SKU',
-                    product.sku,
-                  ),
-                  _infoRow(
-                    'Stock',
-                    '${product.stock} units',
-                  ),
+                  _infoRow('Category', product.category),
+                  _infoRow('SKU', product.sku),
+                  _infoRow('Stock', '${product.stock} units'),
                   _infoRow(
                     'Minimum Order',
                     '${product.minimumOrderQuantity} units',
                   ),
-                  _infoRow(
-                    'Weight',
-                    '${product.weight} g',
-                  ),
+                  _infoRow('Weight', '${product.weight} g'),
                 ],
               ),
             ),
@@ -186,26 +188,15 @@ class ProductDetailsScreen extends StatelessWidget {
             // --------------------------------------------------
             // DIMENSIONS
             // --------------------------------------------------
-
             _buildSectionCard(
               title: 'Dimensions',
               icon: Icons.straighten,
               child: Row(
-                mainAxisAlignment:
-                    MainAxisAlignment.spaceAround,
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _dimensionItem(
-                    'Width',
-                    product.dimensions.width,
-                  ),
-                  _dimensionItem(
-                    'Height',
-                    product.dimensions.height,
-                  ),
-                  _dimensionItem(
-                    'Depth',
-                    product.dimensions.depth,
-                  ),
+                  _dimensionItem('Width', product.dimensions.width),
+                  _dimensionItem('Height', product.dimensions.height),
+                  _dimensionItem('Depth', product.dimensions.depth),
                 ],
               ),
             ),
@@ -215,7 +206,6 @@ class ProductDetailsScreen extends StatelessWidget {
             // --------------------------------------------------
             // TAGS
             // --------------------------------------------------
-
             if (product.tags.isNotEmpty)
               _buildSectionCard(
                 title: 'Tags',
@@ -224,9 +214,7 @@ class ProductDetailsScreen extends StatelessWidget {
                   spacing: 8.w,
                   runSpacing: 8.h,
                   children: product.tags.map((tag) {
-                    return Chip(
-                      label: Text(tag),
-                    );
+                    return Chip(label: Text(tag));
                   }).toList(),
                 ),
               ),
@@ -236,12 +224,10 @@ class ProductDetailsScreen extends StatelessWidget {
             // --------------------------------------------------
             // SHIPPING
             // --------------------------------------------------
-
             _buildInformationTile(
               icon: Icons.local_shipping_outlined,
               title: 'Shipping',
-              description:
-                  product.shippingInformation,
+              description: product.shippingInformation,
             ),
 
             SizedBox(height: 10.h),
@@ -249,12 +235,10 @@ class ProductDetailsScreen extends StatelessWidget {
             // --------------------------------------------------
             // WARRANTY
             // --------------------------------------------------
-
             _buildInformationTile(
               icon: Icons.verified_outlined,
               title: 'Warranty',
-              description:
-                  product.warrantyInformation,
+              description: product.warrantyInformation,
             ),
 
             SizedBox(height: 10.h),
@@ -262,7 +246,6 @@ class ProductDetailsScreen extends StatelessWidget {
             // --------------------------------------------------
             // RETURN POLICY
             // --------------------------------------------------
-
             _buildInformationTile(
               icon: Icons.assignment_return_outlined,
               title: 'Return Policy',
@@ -274,16 +257,13 @@ class ProductDetailsScreen extends StatelessWidget {
             // --------------------------------------------------
             // IMAGE GALLERY
             // --------------------------------------------------
-
-            if (product.images.isNotEmpty)
-              _buildGallery(),
+            if (product.images.isNotEmpty) _buildGallery(),
 
             SizedBox(height: 20.h),
 
             // --------------------------------------------------
             // REVIEWS
             // --------------------------------------------------
-
             _buildReviews(context),
 
             SizedBox(height: 20.h),
@@ -291,7 +271,7 @@ class ProductDetailsScreen extends StatelessWidget {
             // --------------------------------------------------
             // META INFORMATION
             // --------------------------------------------------
-            
+
             /*
             _buildSectionCard(
               title: 'Additional Information',
@@ -314,7 +294,6 @@ class ProductDetailsScreen extends StatelessWidget {
               ),
             ),
             */
-            
             SizedBox(height: 30.h),
           ],
         ),
@@ -330,9 +309,7 @@ class ProductDetailsScreen extends StatelessWidget {
     return SizedBox(
       height: 280.h,
       child: PageView.builder(
-        itemCount: product.images.isEmpty
-            ? 1
-            : product.images.length,
+        itemCount: product.images.isEmpty ? 1 : product.images.length,
         itemBuilder: (context, index) {
           final image = product.images.isEmpty
               ? product.thumbnail
@@ -342,9 +319,7 @@ class ProductDetailsScreen extends StatelessWidget {
             margin: EdgeInsets.symmetric(horizontal: 2.w),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(18.r),
-              color: Theme.of(context)
-                  .colorScheme
-                  .surfaceContainerHighest,
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(18.r),
@@ -378,9 +353,7 @@ class ProductDetailsScreen extends StatelessWidget {
       padding: EdgeInsets.all(16.r),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16.r),
-        color: Theme.of(context)
-            .colorScheme
-            .surfaceContainerHighest,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -394,17 +367,13 @@ class ProductDetailsScreen extends StatelessWidget {
           SizedBox(width: 12.w),
 
           Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: 8.w,
-              vertical: 5.h,
-            ),
+            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 5.h),
             decoration: BoxDecoration(
               color: Colors.green.withOpacity(0.15),
               borderRadius: BorderRadius.circular(8.r),
             ),
             child: CustomText(
-              text:
-                  '${product.discountPercentage.toStringAsFixed(0)}% OFF',
+              text: '${product.discountPercentage.toStringAsFixed(0)}% OFF',
               fontSize: 12.sp,
               fontWeight: FontWeight.bold,
               color: Colors.green,
@@ -425,12 +394,8 @@ class ProductDetailsScreen extends StatelessWidget {
     return Row(
       children: [
         Icon(
-          isAvailable
-              ? Icons.check_circle
-              : Icons.cancel,
-          color: isAvailable
-              ? Colors.green
-              : Colors.red,
+          isAvailable ? Icons.check_circle : Icons.cancel,
+          color: isAvailable ? Colors.green : Colors.red,
           size: 20.sp,
         ),
 
@@ -440,18 +405,15 @@ class ProductDetailsScreen extends StatelessWidget {
           text: product.availabilityStatus.isNotEmpty
               ? product.availabilityStatus
               : isAvailable
-                  ? 'In Stock'
-                  : 'Out of Stock',
+              ? 'In Stock'
+              : 'Out of Stock',
           fontSize: 14.sp,
           fontWeight: FontWeight.w600,
         ),
 
         if (isAvailable) ...[
           SizedBox(width: 6.w),
-          CustomText(
-            text: '(${product.stock} available)',
-            fontSize: 13.sp,
-          ),
+          CustomText(text: '(${product.stock} available)', fontSize: 13.sp),
         ],
       ],
     );
@@ -471,8 +433,7 @@ class ProductDetailsScreen extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.all(16.r),
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
@@ -505,8 +466,7 @@ class ProductDetailsScreen extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 7.h),
       child: Row(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
             width: 120.w,
@@ -532,31 +492,18 @@ class ProductDetailsScreen extends StatelessWidget {
   // DIMENSION ITEM
   // ============================================================
 
-  Widget _dimensionItem(
-    String label,
-    double value,
-  ) {
+  Widget _dimensionItem(String label, double value) {
     return Column(
       children: [
-        Icon(
-          Icons.straighten,
-          size: 22.sp,
-        ),
+        Icon(Icons.straighten, size: 22.sp),
 
         SizedBox(height: 6.h),
 
-        CustomText(
-          text: label,
-          fontSize: 12.sp,
-          fontWeight: FontWeight.w600,
-        ),
+        CustomText(text: label, fontSize: 12.sp, fontWeight: FontWeight.w600),
 
         SizedBox(height: 3.h),
 
-        CustomText(
-          text: '${value.toStringAsFixed(1)} cm',
-          fontSize: 12.sp,
-        ),
+        CustomText(text: '${value.toStringAsFixed(1)} cm', fontSize: 12.sp),
       ],
     );
   }
@@ -573,10 +520,7 @@ class ProductDetailsScreen extends StatelessWidget {
     return Card(
       elevation: 0,
       child: ListTile(
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: 16.w,
-          vertical: 6.h,
-        ),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
         leading: Icon(icon),
 
         title: CustomText(
@@ -588,9 +532,7 @@ class ProductDetailsScreen extends StatelessWidget {
         subtitle: Padding(
           padding: EdgeInsets.only(top: 5.h),
           child: CustomText(
-            text: description.isEmpty
-                ? 'N/A'
-                : description,
+            text: description.isEmpty ? 'N/A' : description,
             fontSize: 13.sp,
           ),
         ),
@@ -608,11 +550,9 @@ class ProductDetailsScreen extends StatelessWidget {
       icon: Icons.photo_library_outlined,
       child: GridView.builder(
         shrinkWrap: true,
-        physics:
-            const NeverScrollableScrollPhysics(),
+        physics: const NeverScrollableScrollPhysics(),
         itemCount: product.images.length,
-        gridDelegate:
-            SliverGridDelegateWithFixedCrossAxisCount(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           crossAxisSpacing: 10.w,
           mainAxisSpacing: 10.h,
@@ -620,20 +560,14 @@ class ProductDetailsScreen extends StatelessWidget {
         ),
         itemBuilder: (context, index) {
           return ClipRRect(
-            borderRadius:
-                BorderRadius.circular(12.r),
+            borderRadius: BorderRadius.circular(12.r),
             child: Image.network(
               product.images[index],
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) {
                 return Container(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .surfaceContainerHighest,
-                  child: Icon(
-                    Icons.image_not_supported,
-                    size: 30.sp,
-                  ),
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  child: Icon(Icons.image_not_supported, size: 30.sp),
                 );
               },
             ),
@@ -647,15 +581,12 @@ class ProductDetailsScreen extends StatelessWidget {
   // REVIEWS
   // ============================================================
 
-  Widget _buildReviews(BuildContext context,) {
+  Widget _buildReviews(BuildContext context) {
     return _buildSectionCard(
       title: 'Customer Reviews',
       icon: Icons.rate_review_outlined,
       child: product.reviews.isEmpty
-          ? CustomText(
-              text: 'No reviews available.',
-              fontSize: 14.sp,
-            )
+          ? CustomText(text: 'No reviews available.', fontSize: 14.sp)
           : Column(
               children: product.reviews.map((review) {
                 return _buildReview(review, context);
@@ -671,31 +602,23 @@ class ProductDetailsScreen extends StatelessWidget {
       padding: EdgeInsets.all(12.r),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(
-          color: Theme.of(context)
-              .dividerColor,
-        ),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               CircleAvatar(
                 radius: 20.r,
-                child: Icon(
-                  Icons.person,
-                  size: 20.sp,
-                ),
+                child: Icon(Icons.person, size: 20.sp),
               ),
 
               SizedBox(width: 10.w),
 
               Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     CustomText(
                       text: review.reviewerName,
@@ -725,17 +648,11 @@ class ProductDetailsScreen extends StatelessWidget {
 
           SizedBox(height: 10.h),
 
-          CustomText(
-            text: review.comment,
-            fontSize: 13.sp,
-          ),
+          CustomText(text: review.comment, fontSize: 13.sp),
 
           SizedBox(height: 6.h),
 
-          CustomText(
-            text: _formatDate(review.date),
-            fontSize: 11.sp,
-          ),
+          CustomText(text: _formatDate(review.date), fontSize: 11.sp),
         ],
       ),
     );
@@ -745,36 +662,21 @@ class ProductDetailsScreen extends StatelessWidget {
   // CHIP
   // ============================================================
 
-  Widget _buildChip(
-    String text,
-    IconData icon,
-    BuildContext context
-  ) {
+  Widget _buildChip(String text, IconData icon, BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: 10.w,
-        vertical: 6.h,
-      ),
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20.r),
-        color: Theme.of(context)
-            .colorScheme
-            .surfaceContainerHighest,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 14.sp,
-          ),
+          Icon(icon, size: 14.sp),
 
           SizedBox(width: 5.w),
 
-          CustomText(
-            text: text,
-            fontSize: 11.sp,
-          ),
+          CustomText(text: text, fontSize: 11.sp),
         ],
       ),
     );

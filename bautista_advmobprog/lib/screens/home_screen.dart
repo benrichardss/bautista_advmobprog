@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'product_screen.dart';
+import 'cart_screen.dart';
 import '../widgets/custom_text.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -22,16 +23,12 @@ class _HomeScreenState extends State<HomeScreen> {
       canPop: false,
       child: Scaffold(
         appBar: AppBar(
-          automaticallyImplyLeading:false,
+          automaticallyImplyLeading: false,
           elevation: 2,
           title: (_selectedIndex == 0)
               ? Image.asset('assets/images/nubdexchange_logo.png', scale: 11.sp)
               : CustomText(
-                  text: (_selectedIndex == 1) 
-                      ? 'Chat' 
-                      : (_selectedIndex == 2) 
-                          ? 'Profile' 
-                          : 'Home',
+                  text: _selectedIndex == 1 ? 'Cart' : _selectedIndex == 2 ? 'Profile' : 'Home',
                   fontSize: 20.sp,
                   fontWeight: FontWeight.w600,
                 ),
@@ -45,7 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
         body: PageView(
           physics: const NeverScrollableScrollPhysics(),
           controller: _pageController,
-          children: const <Widget>[ProductScreen()],
+          children: const <Widget>[ProductScreen(), CartScreen(), SizedBox.shrink()],
           onPageChanged: (page) {
             setState(() {
               _selectedIndex = page;
@@ -58,12 +55,27 @@ class _HomeScreenState extends State<HomeScreen> {
           onTap: _onTappedBar,
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.shop_2), label: 'Shop'),
-            BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile '),
+            BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: 'Cart'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person),
+              label: 'Profile ',
+            ),
           ],
           currentIndex: _selectedIndex,
         ),
-      )
+        // LAB ACTIVITY 3 ENHANCEMENT 2: Make the chat bottom navigation as FloatingActionButton. When in the cart_screen the FloatingActionButton must be hidden. 
+        floatingActionButton: _selectedIndex != 1
+            ? FloatingActionButton(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Chat is coming soon')),
+                  );
+                },
+                tooltip: 'Chat',
+                child: const Icon(Icons.chat),
+              )
+            : null
+      ),
     );
   }
 

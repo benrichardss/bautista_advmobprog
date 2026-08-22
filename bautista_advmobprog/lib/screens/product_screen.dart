@@ -52,7 +52,7 @@ class _ProductScreenState extends State<ProductScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            //ENHANCEMENT 1: ADD SEARCH BAR ABOVE THE ARTICLE LIST.
+            //LAB ACTIVITY 2 ENHANCEMENT 1: ADD SEARCH BAR ABOVE THE ARTICLE LIST.
             TextField(
               controller: _searchController,
               onChanged: _filterProducts,

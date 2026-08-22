@@ -6,7 +6,7 @@ import '../models/product_model.dart';
 class ProductService {
   Future<List<Product>> getAllProducts() async {
     final response = await http.get(Uri.parse('$host/products'));
-    
+
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = jsonDecode(response.body);
       final List productsJson = data['products'] ?? [];
@@ -14,5 +14,15 @@ class ProductService {
     } else {
       throw Exception('Failed to load products');
     }
+  }
+
+  Future<Product> getProductById(int productId) async {
+    final response = await http.get(Uri.parse('$host/products/$productId'));
+
+    if (response.statusCode == 200) {
+      return Product.fromJson(jsonDecode(response.body));
+    }
+
+    throw Exception('Failed to load product $productId');
   }
 }
