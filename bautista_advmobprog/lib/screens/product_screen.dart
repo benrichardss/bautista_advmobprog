@@ -18,30 +18,96 @@ class ProductScreen extends StatefulWidget {
 class _ProductScreenState extends State<ProductScreen> {
   late final Future<List<Product>> _productsFuture;
 
+  final int _pageSize = 10;
+  int _currentPage = 0;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+
   List<Product> _allProducts = [];
   List<Product> _filteredProducts = [];
 
+  String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
   @override
 
   void initState() {
     super.initState();
-    _productsFuture = ProductService().getAllProducts();
+    _productsFuture = _loadFirstPage();
   }
 
-  void _filterProducts(String query) {
+  Future<List<Product>> _loadFirstPage() async {
+    final products = await ProductService().getProducts(
+      limit: _pageSize,
+      skip: 0,
+    );
+
+    _allProducts = products;
+    _filteredProducts = products;
+    return products;
+  }
+
+  Future<void> _loadNextPage() async {
+    if (_isLoadingMore || !_hasMore) return;
+
     setState(() {
-      if (query.isEmpty) {
-        _filteredProducts = _allProducts;
-      } else {
-        _filteredProducts = _allProducts.where((product) {
-          return product.title
-              .toLowerCase()
-              .contains(query.toLowerCase());
-        }).toList();
-      }
+      _isLoadingMore = true;
     });
+
+    try {
+      final nextPage = await ProductService().getProducts(
+        limit: _pageSize,
+        skip: (_currentPage + 1) * _pageSize,
+        query: _searchQuery.isEmpty ? null : _searchQuery,
+      );
+
+      setState(() {
+        _currentPage++;
+
+        if (nextPage.length < _pageSize) {
+          _hasMore = false;
+        }
+
+        _allProducts.addAll(nextPage);
+        _filteredProducts = _allProducts;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingMore = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _filterProducts(String query) async {
+    setState(() {
+      _searchQuery = query.trim();
+      _isLoadingMore = true;
+    });
+
+    try {
+      final products = await ProductService().getProducts(
+        limit: _pageSize,
+        skip: 0,
+        query: _searchQuery,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _allProducts = products;
+        _filteredProducts = products;
+        _currentPage = 0;
+        _hasMore = products.length == _pageSize;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingMore = false;
+        });
+      }
+    }
   }
 
   @override
@@ -174,6 +240,18 @@ class _ProductScreenState extends State<ProductScreen> {
                   },
                 );
               },
+            ),
+            if (_hasMore)
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: 16.h),
+              child: Center(
+                child: FilledButton(
+                  onPressed: _isLoadingMore ? null : _loadNextPage,
+                  child: _isLoadingMore
+                      ? const CircularProgressIndicator()
+                      : const Text('Load more'),
+                ),
+              ),
             ),
           ],
         ),
