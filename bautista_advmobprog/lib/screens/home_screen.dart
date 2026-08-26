@@ -66,11 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
         // LAB ACTIVITY 3 ENHANCEMENT 2: Make the chat bottom navigation as FloatingActionButton. When in the cart_screen the FloatingActionButton must be hidden. 
         floatingActionButton: _selectedIndex != 1
             ? FloatingActionButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Chat is coming soon')),
-                  );
-                },
+                onPressed: () => Navigator.pushNamed(context, '/chat'),
                 tooltip: 'Chat',
                 child: const Icon(Icons.chat),
               )

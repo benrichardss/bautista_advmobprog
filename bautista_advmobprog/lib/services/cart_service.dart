@@ -50,6 +50,6 @@ class CartService {
       return Cart.fromJson(jsonDecode(response.body));
     }
 
-    throw Exception('Failed to add product to cart');
+    throw Exception('Failed to add product to cart'); 
   }
 }

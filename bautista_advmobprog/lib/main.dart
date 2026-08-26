@@ -1,3 +1,4 @@
+import 'package:bautista_advmobprog/screens/chat_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -8,6 +9,7 @@ import 'screens/home_screen.dart';
 import 'screens/settings_screen.dart';
 
 import 'providers/theme_provider.dart';
+import 'providers/cart_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,8 +26,11 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
+      ],
       child: ScreenUtilInit(
         designSize: const Size(412, 715),
         minTextAdapt: true,
@@ -42,6 +47,7 @@ class MainApp extends StatelessWidget {
             routes: {
               '/home': (context) => const HomeScreen(),
               '/settings': (context) => const SettingsScreen(),
+              '/chat': (context) => const ChatScreen()
             }
           );
         },

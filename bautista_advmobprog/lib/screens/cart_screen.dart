@@ -1,42 +1,31 @@
-//LAB ACTIVITY 3 ENHANCEMENT 1: Make a cart_screen in order to render the new API endpoint. The items on the cart_screen must be clickable going to the detail_screen for the utilization of the screen widget. 
+//LAB ACTIVITY 3 ENHANCEMENT 1: Make a cart_screen in order to render the new API endpoint. The items on the cart_screen must be clickable going to the detail_screen for the utilization of the screen widget.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../models/cart_model.dart';
-import '../services/cart_service.dart';
 import '../services/product_service.dart';
 import '../widgets/custom_text.dart';
 import 'product_details_screen.dart';
+import 'package:provider/provider.dart';
+import '../providers/cart_provider.dart';
 
 class CartScreen extends StatefulWidget {
   final int userId;
 
-  const CartScreen({
-    super.key,
-    this.userId = 30,
-  });
+  const CartScreen({super.key, this.userId = 30});
 
   @override
   State<CartScreen> createState() => _CartScreenState();
 }
 
 class _CartScreenState extends State<CartScreen> {
-  late Future<Cart?> _cartFuture;
-
-  final Map<int, int> _quantities = {};
-
   @override
   void initState() {
     super.initState();
-    _cartFuture = CartService().getCartByUserId(widget.userId);
-  }
 
-  void _updateQuantity(CartProduct item, int newQuantity) {
-    if (newQuantity < 1) return;
-
-    setState(() {
-      _quantities[item.id] = newQuantity;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<CartProvider>().loadCart(widget.userId);
     });
   }
 
@@ -49,17 +38,46 @@ class _CartScreenState extends State<CartScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => ProductDetailsScreen(
-            product: product,
-          ),
+          builder: (_) =>
+              ProductDetailsScreen(product: product, fromCart: true),
         ),
       );
     } catch (error) {
       if (!mounted) return;
 
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Unable to open product')));
+    }
+  }
+
+  Future<void> _confirmOrder() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Confirm Order'),
+          content: const Text(
+            'Are you sure you want to place this order?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Confirm'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Unable to open product'),
+          content: Text('Order confirmed'),
         ),
       );
     }
@@ -67,91 +85,79 @@ class _CartScreenState extends State<CartScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Cart?>(
-      future: _cartFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
-        }
+    final cartProvider = context.watch<CartProvider>();
+    final cartItems = cartProvider.items;
 
-        if (snapshot.hasError) {
-          return Center(
-            child: Text(
-              'Unable to load cart',
-              style: TextStyle(
-                fontSize: 16.sp,
-              ),
+    if (cartProvider.isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (cartProvider.error != null) {
+      return Center(
+        child: Text(
+          'Unable to load cart',
+          style: TextStyle(fontSize: 16.sp),
+        ),
+      );
+    }
+
+    if (cartItems.isEmpty) {
+      return _EmptyCart();
+    }
+
+    double subtotal = 0;
+    double total = 0;
+    double savings = 0;
+
+    for (final item in cartItems) {
+      final quantity = item.quantity;
+
+      final originalPrice = item.price;
+      final discountedPrice =
+          item.price - (item.price * item.discountPercentage / 100);
+
+      subtotal += originalPrice * quantity;
+      total += discountedPrice * quantity;
+      savings += (originalPrice - discountedPrice) * quantity;
+    }
+
+    return ListView(
+      padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 24.h),
+      children: [
+        ...cartItems.map((item) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: 12.h),
+            child: _CartItem(
+              item: item,
+              quantity: item.quantity,
+              onTap: () => _openProduct(item),
+              onIncrease: () => cartProvider.increase(item),
+              onDecrease: () => cartProvider.decrease(item),
             ),
           );
-        }
+        }),
 
-        final cart = snapshot.data;
+        SizedBox(height: 8.h),
 
-        if (cart == null || cart.products.isEmpty) {
-          return _EmptyCart();
-        }
+        _OrderSummary(
+          subtotal: subtotal,
+          total: total,
+          savings: savings,
+        ),
 
-        double subtotal = 0;
-        double total = 0;
-        double savings = 0;
+        SizedBox(height: 16.h),
 
-        for (final item in cart.products) {
-          final quantity = _quantities[item.id] ?? item.quantity;
-
-          final originalPrice = item.price;
-          final discountedPrice =
-              item.price - (item.price * (item.discountPercentage / 100));
-
-          subtotal += originalPrice * quantity;
-          total += discountedPrice * quantity;
-          savings += (originalPrice - discountedPrice) * quantity;
-        }
-
-        return ListView(
-          padding: EdgeInsets.fromLTRB(
-            16.w,
-            16.h,
-            16.w,
-            24.h,
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: _confirmOrder,
+            icon: const Icon(Icons.check_circle_outline),
+            label: const Text('Confirm Order'),
           ),
-          children: [
-            // Cart products
-            ...cart.products.map(
-              (item) {
-                final quantity = _quantities[item.id] ?? item.quantity;
-
-                return Padding(
-                  padding: EdgeInsets.only(bottom: 12.h),
-                  child: _CartItem(
-                    item: item,
-                    quantity: quantity,
-                    onTap: () => _openProduct(item),
-                    onIncrease: () => _updateQuantity(
-                      item,
-                      quantity + 1,
-                    ),
-                    onDecrease: () => _updateQuantity(
-                      item,
-                      quantity - 1,
-                    ),
-                  ),
-                );
-              },
-            ),
-
-            SizedBox(height: 8.h),
-
-            // Order summary
-            _OrderSummary(
-              subtotal: subtotal,
-              total: total,
-              savings: savings,
-            ),
-          ],
-        );
-      },
+        ),
+      ],
     );
   }
 }
@@ -177,8 +183,7 @@ class _CartItem extends StatelessWidget {
     final discountedPrice =
         item.price - (item.price * (item.discountPercentage / 100));
 
-    final savings =
-        (item.price - discountedPrice) * quantity;
+    final savings = (item.price - discountedPrice) * quantity;
 
     return Card(
       elevation: 0,
@@ -192,9 +197,7 @@ class _CartItem extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _ProductImage(
-                    imageUrl: item.thumbnail,
-                  ),
+                  _ProductImage(imageUrl: item.thumbnail),
 
                   SizedBox(width: 12.w),
 
@@ -218,20 +221,18 @@ class _CartItem extends StatelessWidget {
                           children: [
                             if (hasDiscount)
                               Text(
-                                '\$${item.price.toStringAsFixed(2)}',
+                                '₱${item.price.toStringAsFixed(2)}',
                                 style: TextStyle(
                                   fontSize: 12.sp,
                                   color: Colors.grey.shade500,
-                                  decoration:
-                                      TextDecoration.lineThrough,
+                                  decoration: TextDecoration.lineThrough,
                                 ),
                               ),
 
-                            if (hasDiscount)
-                              SizedBox(width: 6.w),
+                            if (hasDiscount) SizedBox(width: 6.w),
 
                             Text(
-                              '\$${(item.price - (item.price * (item.discountPercentage / 100))).toStringAsFixed(2)} each',
+                              '₱${(item.price - (item.price * (item.discountPercentage / 100))).toStringAsFixed(2)} each',
                               style: TextStyle(
                                 fontSize: 13.sp,
                                 fontWeight: FontWeight.w600,
@@ -249,9 +250,7 @@ class _CartItem extends StatelessWidget {
                             ),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(6.r),
-                              color: Colors.green.withValues(
-                                alpha: 0.1,
-                              ),
+                              color: Colors.green.withValues(alpha: 0.1),
                             ),
                             child: Text(
                               '${item.discountPercentage.toStringAsFixed(0)}% OFF',
@@ -276,7 +275,7 @@ class _CartItem extends StatelessWidget {
                   if (hasDiscount)
                     Expanded(
                       child: Text(
-                        'You save \$${savings.toStringAsFixed(2)}',
+                        'You save ₱${savings.toStringAsFixed(2)}',
                         style: TextStyle(
                           fontSize: 12.sp,
                           color: Colors.green.shade700,
@@ -296,7 +295,7 @@ class _CartItem extends StatelessWidget {
                   SizedBox(width: 12.w),
 
                   Text(
-                    '\$${((item.price - (item.price * (item.discountPercentage / 100))) * quantity).toStringAsFixed(2)}',
+                    '₱${((item.price - (item.price * (item.discountPercentage / 100))) * quantity).toStringAsFixed(2)}',
                     style: TextStyle(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.bold,
@@ -327,9 +326,7 @@ class _QuantitySelector extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(
-          color: Colors.grey.shade300,
-        ),
+        border: Border.all(color: Theme.of(context).colorScheme.surfaceContainerHighest,),
         borderRadius: BorderRadius.circular(8.r),
       ),
       child: Row(
@@ -344,9 +341,7 @@ class _QuantitySelector extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.all(7.r),
               child: Icon(
-                quantity == 1
-                    ? Icons.delete_outline
-                    : Icons.remove,
+                quantity == 1 ? Icons.delete_outline : Icons.remove,
                 size: 17.sp,
               ),
             ),
@@ -357,10 +352,7 @@ class _QuantitySelector extends StatelessWidget {
             child: Center(
               child: Text(
                 '$quantity',
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600),
               ),
             ),
           ),
@@ -373,10 +365,7 @@ class _QuantitySelector extends StatelessWidget {
             ),
             child: Padding(
               padding: EdgeInsets.all(7.r),
-              child: Icon(
-                Icons.add,
-                size: 17.sp,
-              ),
+              child: Icon(Icons.add, size: 17.sp),
             ),
           ),
         ],
@@ -388,9 +377,7 @@ class _QuantitySelector extends StatelessWidget {
 class _ProductImage extends StatelessWidget {
   final String imageUrl;
 
-  const _ProductImage({
-    required this.imageUrl,
-  });
+  const _ProductImage({required this.imageUrl});
 
   @override
   Widget build(BuildContext context) {
@@ -398,14 +385,14 @@ class _ProductImage extends StatelessWidget {
       width: 90.w,
       height: 90.w,
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12.r),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12.r),
         child: Image.network(
           imageUrl,
-          fit: BoxFit.contain,
+          fit: BoxFit.cover,
           errorBuilder: (_, __, ___) {
             return Icon(
               Icons.image_not_supported_outlined,
@@ -419,9 +406,7 @@ class _ProductImage extends StatelessWidget {
             }
 
             return const Center(
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-              ),
+              child: CircularProgressIndicator(strokeWidth: 2),
             );
           },
         ),
@@ -448,8 +433,7 @@ class _OrderSummary extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.all(16.r),
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             CustomText(
               text: 'Order Summary',
@@ -461,16 +445,14 @@ class _OrderSummary extends StatelessWidget {
 
             _SummaryRow(
               label: 'Subtotal',
-              value:
-                  '\$${subtotal.toStringAsFixed(2)}',
+              value: '₱${subtotal.toStringAsFixed(2)}',
             ),
 
             SizedBox(height: 10.h),
 
             _SummaryRow(
               label: 'Discount',
-              value:
-                  '-\$${savings.toStringAsFixed(2)}',
+              value: '-₱${savings.toStringAsFixed(2)}',
               valueColor: Colors.green.shade700,
             ),
 
@@ -482,8 +464,7 @@ class _OrderSummary extends StatelessWidget {
 
             _SummaryRow(
               label: 'Total',
-              value:
-                  '\$${total.toStringAsFixed(2)}',
+              value: '₱${total.toStringAsFixed(2)}',
               isTotal: true,
             ),
           ],
@@ -515,9 +496,7 @@ class _SummaryRow extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: isTotal ? 16.sp : 14.sp,
-              fontWeight: isTotal
-                  ? FontWeight.bold
-                  : FontWeight.normal,
+              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
               color: Colors.grey.shade700,
             ),
           ),
@@ -563,10 +542,7 @@ class _EmptyCart extends StatelessWidget {
             Text(
               'Products you add to your cart will appear here.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: 14.sp,
-              ),
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 14.sp),
             ),
           ],
         ),

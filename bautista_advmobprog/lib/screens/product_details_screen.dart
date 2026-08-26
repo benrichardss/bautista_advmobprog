@@ -3,43 +3,32 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../models/product_model.dart';
-import '../services/cart_service.dart';
 import '../widgets/custom_text.dart';
+
+import 'package:provider/provider.dart';
+import '../providers/cart_provider.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   final Product product;
+  final bool fromCart;
 
-  const ProductDetailsScreen({super.key, required this.product});
+  const ProductDetailsScreen({super.key, required this.product, this.fromCart = false});
 
   @override
   State<ProductDetailsScreen> createState() => _ProductDetailsScreenState();
 }
 
 class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
-  bool _isAddingToCart = false;
+  final bool _isAddingToCart = false;
 
   Product get product => widget.product;
 
-  Future<void> _addToCart() async {
-    setState(() => _isAddingToCart = true);
-    try {
-      await CartService().addToCart(
-        userId: 5,
-        productId: product.id,
-        quantity: 1,
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Product added to cart')));
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Unable to add product: $error')));
-    } finally {
-      if (mounted) setState(() => _isAddingToCart = false);
-    }
+  void _addToCart() {
+    context.read<CartProvider>().addProduct(product);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Product added to cart')),
+    );
   }
 
   @override
@@ -126,20 +115,24 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
             SizedBox(height: 16.h),
 
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: _isAddingToCart ? null : _addToCart,
-                icon: _isAddingToCart
-                    ? SizedBox(
-                        width: 18.sp,
-                        height: 18.sp,
-                        child: const CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.add_shopping_cart),
-                label: const Text('Add to cart'),
-              ),
-            ),
+            widget.fromCart
+                ? const SizedBox.shrink()
+                : SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: _isAddingToCart ? null : _addToCart,
+                      icon: _isAddingToCart
+                          ? SizedBox(
+                              width: 18.sp,
+                              height: 18.sp,
+                              child: const CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Icon(Icons.add_shopping_cart),
+                      label: const Text('Add to cart'),
+                    ),
+                  ),
 
             // --------------------------------------------------
             // AVAILABILITY
@@ -359,7 +352,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           CustomText(
-            text: '\$${product.price.toStringAsFixed(2)}',
+            text: '₱${product.price.toStringAsFixed(2)}',
             fontSize: 28.sp,
             fontWeight: FontWeight.bold,
           ),

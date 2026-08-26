@@ -130,13 +130,20 @@ class _ProductScreenState extends State<ProductScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Image.network(
-                                product.thumbnail,
-                                fit: BoxFit.cover,
-                                width: double.infinity,
-                                errorBuilder: (_, __, ___) =>
-                                    Icon(Icons.image, size: 24.sp),
+                            Padding(
+                              padding: EdgeInsets.all(8.r),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(8.r),
+                                ),
+                                child: Image.network(
+                                  product.thumbnail,
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  errorBuilder: (_, __, ___) =>
+                                      Icon(Icons.image, size: 24.sp),
+                                ),
                               ),
                             ),
                             Padding(
@@ -153,7 +160,7 @@ class _ProductScreenState extends State<ProductScreen> {
                                   ),
                                   SizedBox(height: 4.h),
                                   CustomText(
-                                    text: '\$${product.price.toStringAsFixed(2)}',
+                                    text: '₱${product.price.toStringAsFixed(2)}',
                                     fontSize: 12.sp,
                                     fontWeight: FontWeight.w600,
                                   ),
