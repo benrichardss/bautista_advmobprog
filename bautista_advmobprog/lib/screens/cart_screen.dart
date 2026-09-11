@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../models/cart_model.dart';
+import '../models/cart.dart';
 import '../services/product_service.dart';
 import '../widgets/custom_text.dart';
 import 'product_details_screen.dart';
@@ -13,7 +13,7 @@ import '../providers/cart_provider.dart';
 class CartScreen extends StatefulWidget {
   final int userId;
 
-  const CartScreen({super.key, this.userId = 30});
+  const CartScreen({super.key, required this.userId});
 
   @override
   State<CartScreen> createState() => _CartScreenState();
@@ -57,9 +57,7 @@ class _CartScreenState extends State<CartScreen> {
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Confirm Order'),
-          content: const Text(
-            'Are you sure you want to place this order?',
-          ),
+          content: const Text('Are you sure you want to place this order?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
@@ -75,11 +73,9 @@ class _CartScreenState extends State<CartScreen> {
     );
 
     if (confirmed == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Order confirmed'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Order confirmed')));
     }
   }
 
@@ -89,17 +85,12 @@ class _CartScreenState extends State<CartScreen> {
     final cartItems = cartProvider.items;
 
     if (cartProvider.isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (cartProvider.error != null) {
       return Center(
-        child: Text(
-          'Unable to load cart',
-          style: TextStyle(fontSize: 16.sp),
-        ),
+        child: Text('Unable to load cart', style: TextStyle(fontSize: 16.sp)),
       );
     }
 
@@ -141,11 +132,7 @@ class _CartScreenState extends State<CartScreen> {
 
         SizedBox(height: 8.h),
 
-        _OrderSummary(
-          subtotal: subtotal,
-          total: total,
-          savings: savings,
-        ),
+        _OrderSummary(subtotal: subtotal, total: total, savings: savings),
 
         SizedBox(height: 16.h),
 
@@ -326,7 +313,9 @@ class _QuantitySelector extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: Theme.of(context).colorScheme.surfaceContainerHighest,),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        ),
         borderRadius: BorderRadius.circular(8.r),
       ),
       child: Row(

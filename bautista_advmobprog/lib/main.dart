@@ -5,11 +5,14 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
+import 'models/user.dart';
 import 'screens/home_screen.dart';
 import 'screens/settings_screen.dart';
 
 import 'providers/theme_provider.dart';
 import 'providers/cart_provider.dart';
+import 'screens/signin_screen.dart';
+import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,12 +46,22 @@ class MainApp extends StatelessWidget {
             darkTheme: themeModel.darkTheme,
             themeMode: themeModel.isDark ? ThemeMode.dark : ThemeMode.light,
             title: 'E-Commerce App',
-            initialRoute: '/home',
+            initialRoute: '/splash',
             routes: {
-              '/home': (context) => const HomeScreen(),
+              '/splash': (context) => const SplashScreen(),
+              '/signin': (context) => const SignInScreen(),
               '/settings': (context) => const SettingsScreen(),
-              '/chat': (context) => const ChatScreen()
-            }
+              '/chat': (context) => const ChatScreen(),
+              '/home': (context) {
+                final arguments = ModalRoute.of(context)?.settings.arguments;
+
+                if (arguments is User) {
+                  return HomeScreen(user: arguments);
+                }
+
+                return const SignInScreen();
+              },
+            },
           );
         },
       ),

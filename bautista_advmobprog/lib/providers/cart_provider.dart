@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
-import '../models/cart_model.dart';
-import '../models/product_model.dart';
+import '../models/cart.dart';
+import '../models/product.dart';
 import '../services/cart_service.dart';
 
 class CartProvider extends ChangeNotifier {
@@ -16,8 +16,10 @@ class CartProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
+  int? _loadedUserId;
+
   Future<void> loadCart(int userId) async {
-    if (_hasLoaded) return;
+    if (_hasLoaded && _loadedUserId == userId) return;
 
     _isLoading = true;
     _error = null;
@@ -30,6 +32,7 @@ class CartProvider extends ChangeNotifier {
         ..clear()
         ..addAll(cart?.products ?? []);
 
+      _loadedUserId = userId;
       _hasLoaded = true;
     } catch (error) {
       _error = error.toString();
@@ -54,8 +57,8 @@ class CartProvider extends ChangeNotifier {
           quantity: 1,
           total: product.price,
           discountPercentage: product.discountPercentage,
-          discountedTotal: product.price -
-              product.price * product.discountPercentage / 100,
+          discountedTotal:
+              product.price - product.price * product.discountPercentage / 100,
           thumbnail: product.thumbnail,
         ),
       );
@@ -87,6 +90,13 @@ class CartProvider extends ChangeNotifier {
 
   void remove(CartProduct item) {
     _items.removeWhere((cartItem) => cartItem.id == item.id);
+    notifyListeners();
+  }
+
+  void clearCart() {
+    _items.clear();
+    _hasLoaded = false;
+    _error = null;
     notifyListeners();
   }
 
