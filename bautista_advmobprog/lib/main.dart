@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
 import 'models/user.dart';
 import 'screens/home_screen.dart';
@@ -13,6 +15,7 @@ import 'providers/theme_provider.dart';
 import 'providers/cart_provider.dart';
 import 'screens/signin_screen.dart';
 import 'screens/splash_screen.dart';
+import 'screens/signup_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,6 +23,9 @@ void main() async {
     _,
   ) async {
     await dotenv.load(fileName: "assets/.env");
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
     runApp(const MainApp());
   });
 }
@@ -50,6 +56,7 @@ class MainApp extends StatelessWidget {
             routes: {
               '/splash': (context) => const SplashScreen(),
               '/signin': (context) => const SignInScreen(),
+              '/signup': (context) => const SignupScreen(),
               '/settings': (context) => const SettingsScreen(),
               '/chat': (context) => const ChatScreen(),
               '/home': (context) {

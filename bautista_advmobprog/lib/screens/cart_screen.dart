@@ -9,6 +9,8 @@ import '../widgets/custom_text.dart';
 import 'product_details_screen.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
+import '../models/login_type.dart';
+import '../services/user_service.dart';
 
 class CartScreen extends StatefulWidget {
   final int userId;
@@ -24,8 +26,14 @@ class _CartScreenState extends State<CartScreen> {
   void initState() {
     super.initState();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<CartProvider>().loadCart(widget.userId);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final loginType = await UserService().getLoginType();
+
+      if (!mounted) return;
+
+      await context.read<CartProvider>().loadCart(
+        loginType == LoginType.firebase ? null : widget.userId,
+      );
     });
   }
 

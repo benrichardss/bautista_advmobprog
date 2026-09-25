@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "611418278155",
+    "project_id": "advmobprog-firebase-cd65e",
+    "storage_bucket": "advmobprog-firebase-cd65e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:611418278155:android:77b777894476a198f5fa0e",
+        "android_client_info": {
+          "package_name": "com.example.bautista_advmobprog"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC0SUXWCgt2rualTm9HEakvHOLXY8Yidgw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -52,7 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: <Widget>[
             const ProductScreen(),
             CartScreen(userId: widget.user.id,),
-            ProfileScreen(user: widget.user),
+            const ProfileScreen(),
           ],
           onPageChanged: (page) {
             setState(() {

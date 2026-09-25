@@ -18,7 +18,7 @@ class CartProvider extends ChangeNotifier {
 
   int? _loadedUserId;
 
-  Future<void> loadCart(int userId) async {
+  Future<void> loadCart(int? userId) async {
     if (_hasLoaded && _loadedUserId == userId) return;
 
     _isLoading = true;
@@ -26,14 +26,23 @@ class CartProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final cart = await _cartService.getCartByUserId(userId);
+      if (userId == null) {
+        if (_hasLoaded && _loadedUserId != null) {
+          _items.clear();
+        }
 
-      _items
-        ..clear()
-        ..addAll(cart?.products ?? []);
+        _loadedUserId = null;
+        _hasLoaded = true;
+      } else {
+        final cart = await _cartService.getCartByUserId(userId);
 
-      _loadedUserId = userId;
-      _hasLoaded = true;
+        _items
+          ..clear()
+          ..addAll(cart?.products ?? []);
+
+        _loadedUserId = userId;
+        _hasLoaded = true;
+      }
     } catch (error) {
       _error = error.toString();
     } finally {
