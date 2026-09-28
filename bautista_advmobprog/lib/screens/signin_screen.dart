@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../models/login_type.dart';
+import '../services/chat_service.dart';
 import '../services/user_service.dart';
 import '../widgets/custom_text.dart';
 
@@ -67,11 +68,9 @@ class _SignInScreenState extends State<SignInScreen> {
         _isLoading = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Login failed: $error'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Login failed: $error')));
     }
   }
 
@@ -108,6 +107,20 @@ class _SignInScreenState extends State<SignInScreen> {
       'refreshToken': '',
       'token': token ?? '',
     });
+
+    final chatService = ChatService();
+    final existingProfile = await chatService.getUserProfile();
+
+    if (existingProfile == null) {
+      final displayName = firebaseUser.displayName ?? '';
+
+      await chatService.saveUserProfile(
+        username: displayName,
+        firstName: displayName,
+        lastName: '',
+        email: firebaseUser.email ?? '',
+      );
+    }
   }
 
   String? _validateUsername(String? value) {
@@ -155,10 +168,7 @@ class _SignInScreenState extends State<SignInScreen> {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(
-            horizontal: 24.w,
-            vertical: 32.h,
-          ),
+          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 32.h),
           child: Form(
             key: _formKey,
             child: Column(

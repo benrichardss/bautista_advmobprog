@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../services/chat_service.dart';
+import '../services/user_service.dart';
 import '../widgets/custom_text.dart';
+import 'chat_detailscreen.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -11,151 +14,184 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final TextEditingController _messageController = TextEditingController();
+  final TextEditingController _searchChatController = TextEditingController();
+  final ChatService _chatService = ChatService();
+  String? _currentUserEmail;
+  String _searchText = '';
 
-  final List<_ChatMessage> _messages = [
-    _ChatMessage(
-      text: 'Hello! How can we help you today?',
-      isUser: false,
-    ),
-    _ChatMessage(
-      text: 'I have a question about my order.',
-      isUser: true,
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentUserEmail();
+  }
+
+  Future<void> _loadCurrentUserEmail() async {
+    final userData = await userService.value.getUserData();
+    setState(() {
+      _currentUserEmail = userData['email'];
+    });
+  }
 
   @override
   void dispose() {
-    _messageController.dispose();
+    _searchChatController.dispose();
     super.dispose();
-  }
-
-  void _sendMessage() {
-    final message = _messageController.text.trim();
-
-    if (message.isEmpty) return;
-
-    setState(() {
-      _messages.add(
-        _ChatMessage(
-          text: message,
-          isUser: true,
-        ),
-      );
-    });
-
-    _messageController.clear();
-
-    // Placeholder automatic response.
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (!mounted) return;
-
-      setState(() {
-        _messages.add(
-          const _ChatMessage(
-            text: 'Thanks for your message. A support representative will assist you shortly.',
-            isUser: false,
-          ),
-        );
-      });
-    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        elevation: 2,
-        title: CustomText(
-          text: 'Chat',     
-          fontSize: 20.sp,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView.builder(
-                padding: EdgeInsets.all(16.r),
-                itemCount: _messages.length,
-                itemBuilder: (context, index) {
-                  final message = _messages[index];
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          SizedBox(height: 20.h),
+          Padding(
+            padding: EdgeInsetsGeometry.symmetric(horizontal: 23.w),
+            child: TextField(
+              controller: _searchChatController,
+              textInputAction: TextInputAction.search,
+              onChanged: (value) {
+                setState(() {
+                  _searchText = value.trim().toLowerCase();
+                });
+              },
+              decoration: InputDecoration(
+                hintText: 'Search chat...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: (_searchChatController.text.isNotEmpty)
+                    ? IconButton(
+                        tooltip: 'Clear',
+                        icon: const Icon(Icons.cancel),
+                        onPressed: () {
+                          setState(() {
+                            _searchChatController.clear();
+                            _searchText = '';
+                          });
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+          SizedBox(height: 10.h),
 
-                  return Align(
-                    alignment: message.isUser
-                        ? Alignment.centerRight
-                        : Alignment.centerLeft,
-                    child: Container(
-                      constraints: BoxConstraints(
-                        maxWidth: 280.w,
-                      ),
-                      margin: EdgeInsets.only(bottom: 10.h),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 14.w,
-                        vertical: 10.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: message.isUser
-                            ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(16.r),
-                      ),
-                      child: CustomText(
-                        text: message.text,
-                        color: message.isUser
-                            ? Theme.of(context).colorScheme.onPrimary
-                            : Theme.of(context).colorScheme.onSurface,
-                        fontSize: 14.sp,
+          StreamBuilder<List<Map<String, dynamic>>>(
+            stream: _chatService.getUsersStream(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Container(
+                  height: ScreenUtil().screenHeight * 0.6,
+                  padding: EdgeInsets.all(16.sp),
+                  child: const Center(
+                    child: CircularProgressIndicator.adaptive(),
+                  ),
+                );
+              }
+              if (snapshot.hasError) {
+                return Container(
+                  height: ScreenUtil().screenHeight * 0.6,
+                  padding: EdgeInsets.all(16.sp),
+                  child: Center(
+                    child: CustomText(
+                      text: 'Error loading users',
+                      fontSize: 16.sp,
+                    ),
+                  ),
+                );
+              }
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final currentUserId = userService.value.currentUser?.uid ?? '';
+              final currentUserEmail =
+                  userService.value.currentUser?.email?.toLowerCase() ?? '';
+
+              final users = snapshot.data!.where((user) {
+                final uid = (user['uid'] ?? '').toString();
+                final email = (user['email'] ?? '').toString().toLowerCase();
+                final firstName = (user['firstName'] ?? '')
+                    .toString()
+                    .toLowerCase();
+                final lastName = (user['lastName'] ?? '')
+                    .toString()
+                    .toLowerCase();
+                final name = '$firstName $lastName';
+
+                final isCurrentUser =
+                    uid == currentUserId ||
+                    (email.isNotEmpty && email == currentUserEmail);
+                final matchesSearch =
+                    name.contains(_searchText) || email.contains(_searchText);
+
+                return !isCurrentUser && matchesSearch;
+              }).toList();
+
+              if (users.isEmpty) {
+                return Center(
+                  child: CustomText(
+                    text: _searchText.isEmpty
+                        ? 'No users found'
+                        : 'No matching users',
+                    fontSize: 16.sp,
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                shrinkWrap: true,
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: users.length,
+                itemBuilder: (context, index) {
+                  final user = users[index];
+                  final firstName = (user['firstName'] ?? '').toString().trim();
+                  final lastName = (user['lastName'] ?? '').toString().trim();
+                  final fullName = '$firstName $lastName'.trim();
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ChatDetailScreen(
+                            currentUserEmail: _currentUserEmail!,
+                            tappedUser: user,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Card(
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          child: CustomText(
+                            text: fullName.isNotEmpty
+                                ? fullName[0].toUpperCase()
+                                : '?',
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        title: CustomText(
+                          text: fullName.isNotEmpty ? fullName : 'Unknown',
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        subtitle: CustomText(
+                          text: user['email'] ?? 'No email',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w300,
+                        ),
                       ),
                     ),
                   );
                 },
-              ),
-            ),
-
-            Padding(
-              padding: EdgeInsets.fromLTRB(12.w, 8.h, 12.w, 12.h),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _sendMessage(),
-                      decoration: InputDecoration(
-                        hintText: 'Type a message...',
-                        hintStyle: TextStyle(fontFamily: 'Poppins'),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12.r),
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 8.w),
-                  IconButton.filled(
-                    onPressed: _sendMessage,
-                    tooltip: 'Send message',
-                    icon: const Icon(Icons.send),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
-}
-
-class _ChatMessage {
-  final String text;
-  final bool isUser;
-
-  const _ChatMessage({
-    required this.text,
-    required this.isUser,
-  });
 }

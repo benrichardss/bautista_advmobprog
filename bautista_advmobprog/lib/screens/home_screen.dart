@@ -6,6 +6,7 @@ import 'product_screen.dart';
 import 'cart_screen.dart';
 import '../widgets/custom_text.dart';
 import 'profile_screen.dart';
+import 'chat_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final User user;
@@ -32,8 +33,10 @@ class _HomeScreenState extends State<HomeScreen> {
               ? Image.asset('assets/images/nubdexchange_logo.png', scale: 11.sp)
               : CustomText(
                   text: _selectedIndex == 1
-                      ? 'Cart'
+                      ? 'Chat'
                       : _selectedIndex == 2
+                      ? 'Cart'
+                      : _selectedIndex == 3
                       ? 'Profile'
                       : 'Home',
                   fontSize: 20.sp,
@@ -51,6 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
           controller: _pageController,
           children: <Widget>[
             const ProductScreen(),
+            const ChatScreen(),
             CartScreen(userId: widget.user.id,),
             const ProfileScreen(),
           ],
@@ -61,11 +65,18 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         ),
         bottomNavigationBar: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
           showSelectedLabels: false,
           showUnselectedLabels: false,
+          selectedItemColor: Theme.of(context).colorScheme.primary,
+          unselectedItemColor: Theme.of(context).colorScheme.onSurfaceVariant,
           onTap: _onTappedBar,
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.shop_2), label: 'Shop'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.message),
+              label: 'Chat',
+            ),
             BottomNavigationBarItem(
               icon: Icon(Icons.shopping_cart),
               label: 'Cart',
@@ -77,14 +88,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
           currentIndex: _selectedIndex,
         ),
-        // LAB ACTIVITY 3 ENHANCEMENT 2: Make the chat bottom navigation as FloatingActionButton. When in the cart_screen the FloatingActionButton must be hidden.
-        floatingActionButton: _selectedIndex != 1
-            ? FloatingActionButton(
-                onPressed: () => Navigator.pushNamed(context, '/chat'),
-                tooltip: 'Chat',
-                child: const Icon(Icons.chat),
-              )
-            : null,
       ),
     );
   }

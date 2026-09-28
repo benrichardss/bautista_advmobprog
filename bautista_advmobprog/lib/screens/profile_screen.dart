@@ -7,6 +7,8 @@ import '../models/login_type.dart';
 import '../providers/cart_provider.dart';
 import '../services/user_service.dart';
 
+import '../services/chat_service.dart';
+
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -37,6 +39,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final data = await _userService.getUserData();
       final type = await _userService.getLoginType();
+
+      if (type == LoginType.firebase) {
+        final firestoreProfile = await ChatService().getUserProfile();
+        if (firestoreProfile != null) {
+          data.addAll(firestoreProfile);
+        }
+      }
 
       if (!mounted) return;
 
@@ -137,6 +146,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     try {
       await _userService.updateUsername(username: username);
+      await ChatService().updateUsername(username);
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('username', username);
@@ -421,8 +431,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         onPressed: () {
                           modalSetState(() {
-                            _obscureDeletePassword =
-                                !_obscureDeletePassword;
+                            _obscureDeletePassword = !_obscureDeletePassword;
                           });
                         },
                       ),
@@ -484,14 +493,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final username = _userData['username']?.toString().trim() ?? '';
     final firstName = _userData['firstName']?.toString().trim() ?? '';
     final lastName = _userData['lastName']?.toString().trim() ?? '';
-    final dummyName = '$firstName $lastName'.trim();
     final isDummyJson = _loginType == LoginType.dummyJson;
     final firebaseUser = _userService.currentUser;
     final firebaseName = firebaseUser?.displayName?.trim() ?? '';
 
+    final registeredName = '$firstName $lastName'.trim();
+
     final displayName = isDummyJson
-        ? (dummyName.isNotEmpty ? dummyName : username)
-        : (firebaseName.isNotEmpty ? firebaseName : username);
+        ? (registeredName.isNotEmpty ? registeredName : username)
+        : (registeredName.isNotEmpty
+              ? registeredName
+              : firebaseName.isNotEmpty
+              ? firebaseName
+              : username);
 
     final email = isDummyJson
         ? _userData['email']?.toString().trim() ?? ''
@@ -517,10 +531,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Center(
             child: Column(
               children: [
-                _profileAvatar(
-                  imageUrl: profileImage,
-                  displayName: name,
-                ),
+                _profileAvatar(imageUrl: profileImage, displayName: name),
                 SizedBox(height: 16.h),
                 Text(
                   name,
@@ -531,10 +542,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                if (email.isNotEmpty) ...[
+                if (username.isNotEmpty) ...[
                   SizedBox(height: 5.h),
                   Text(
-                    email,
+                    '@$username',
                     textAlign: TextAlign.center,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -554,10 +565,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Icons.person_outline,
             label: 'Username',
             value: username,
-            onEdit: _loginType == LoginType.firebase
-                ? _updateUsername
-                : null,
+            onEdit: _loginType == LoginType.firebase ? _updateUsername : null,
           ),
+          if (_loginType == LoginType.firebase)
+            _profileSetting(
+              context,
+              icon: Icons.phone_outlined,
+              label: 'Contact number',
+              value: _userData['contactNo']?.toString() ?? '',
+            ),
           _profileSetting(
             context,
             icon: Icons.mail_outline,
@@ -661,11 +677,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         color: colors.primaryContainer,
         child: Center(
           child: initial.isEmpty
-              ? Icon(
-                  Icons.person_outline,
-                  size: 44.sp,
-                  color: colors.primary,
-                )
+              ? Icon(Icons.person_outline, size: 44.sp, color: colors.primary)
               : Text(
                   initial,
                   style: Theme.of(context).textTheme.headlineLarge?.copyWith(
@@ -727,11 +739,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           SizedBox(
             width: 34.w,
-            child: Icon(
-              icon,
-              size: 21.sp,
-              color: colors.onSurfaceVariant,
-            ),
+            child: Icon(icon, size: 21.sp, color: colors.onSurfaceVariant),
           ),
           SizedBox(width: 10.w),
           Expanded(

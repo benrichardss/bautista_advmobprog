@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/user_service.dart';
+import '../services/chat_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -132,6 +133,15 @@ class _SignupScreenState extends State<SignupScreen> {
         'token': token ?? '',
       });
 
+      await ChatService().saveUserProfile(
+        username: _usernameController.text.trim(),
+        firstName: _fNameController.text.trim(),
+        lastName: _lNameController.text.trim(),
+        email: _emailController.text.trim(),
+        age: _ageController.text.trim(),
+        contactNo: _contactController.text.trim(),
+      );
+
       if (!mounted) return;
 
       Navigator.pushNamedAndRemoveUntil(
@@ -143,9 +153,9 @@ class _SignupScreenState extends State<SignupScreen> {
     } catch (error) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Signup failed: $error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Signup failed: $error')));
     } finally {
       if (mounted) {
         setState(() {
@@ -175,9 +185,7 @@ class _SignupScreenState extends State<SignupScreen> {
           labelText: label,
           prefixIcon: Icon(icon),
           suffixIcon: suffixIcon,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12.r),
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r)),
         ),
       ),
     );
